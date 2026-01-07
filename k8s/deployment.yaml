@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oficina-cardozo-api
+  labels:
+    app: oficina-cardozo-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: oficina-cardozo-api
+  template:
+    metadata:
+      labels:
+        app: oficina-cardozo-api
+    spec:
+      containers:
+        - name: api
+          image: marciocardozodev/oficinacardozo-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: oficina-cardozo-config
+            - secretRef:
+                name: oficina-cardozo-secrets
+          readinessProbe:
+            httpGet:
+              path: "/swagger/index.html"
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: "/swagger/index.html"
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+# Namespace é definido externamente pelo pipeline (K8S_NAMESPACE_*)
+# Este Deployment assume que secrets/configmaps de conexão (DB, JWT, Email) serão
+# definidos depois via k8s manifests ou Helm.
