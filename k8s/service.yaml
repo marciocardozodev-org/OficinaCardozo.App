@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: oficina-cardozo-api
+  labels:
+    app: oficina-cardozo-api
+spec:
+  selector:
+    app: oficina-cardozo-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
