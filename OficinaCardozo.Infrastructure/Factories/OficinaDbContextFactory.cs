@@ -18,7 +18,8 @@ namespace OficinaCardozo.Infrastructure.Factories
             string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
             Console.WriteLine($"[OficinaDbContextFactory] Ambiente detectado: {environment}");
 
-            string apiProjectPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "OficinaCardozo.API");
+            string apiProjectPath = Environment.GetEnvironmentVariable("API_PROJECT_PATH")
+                ?? Path.Combine(Directory.GetCurrentDirectory(), "..", "OficinaCardozo.API");
 
             IConfigurationRoot configuration = new ConfigurationBuilder()
                 .SetBasePath(apiProjectPath)
