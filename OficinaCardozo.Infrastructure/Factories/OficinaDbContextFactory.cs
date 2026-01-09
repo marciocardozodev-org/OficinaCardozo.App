@@ -16,7 +16,22 @@ namespace OficinaCardozo.Infrastructure.Factories
         public OficinaDbContext CreateDbContext(string[] args)
         {
             string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
-            Console.WriteLine($"[OficinaDbContextFactory] Ambiente detectado: {environment}");
+            Console.WriteLine($"[OficinaDbContextFactory] ENV: {environment}");
+
+            string apiProjectPath = Environment.GetEnvironmentVariable("API_PROJECT_PATH")
+                ?? Path.Combine(Directory.GetCurrentDirectory(), "..", "OficinaCardozo.API");
+
+            IConfigurationRoot configuration = new ConfigurationBuilder()
+                .SetBasePath(apiProjectPath)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddJsonFile($"appsettings.{environment}.json", optional: true)
+                .AddUserSecrets<OficinaDbContextFactory>() 
+                .AddEnvironmentVariables()
+                .Build();
+
+            var optionsBuilder = new DbContextOptionsBuilder<OficinaDbContext>();
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            Console.WriteLine($"[OficinaDbContextFactory] ConnectionString: {connectionString}");
 
             string apiProjectPath = Environment.GetEnvironmentVariable("API_PROJECT_PATH")
                 ?? Path.Combine(Directory.GetCurrentDirectory(), "..", "OficinaCardozo.API");
@@ -37,7 +52,7 @@ namespace OficinaCardozo.Infrastructure.Factories
                 throw new InvalidOperationException("A string de conex�o 'DefaultConnection' n�o foi encontrada.");
             }
 
-            if (connectionString.Contains("Host=") || connectionString.Contains("host="))
+            if (!string.IsNullOrEmpty(connectionString) && (connectionString.Contains("Host=") || connectionString.Contains("host=")))
             {
                 Console.WriteLine("[OficinaDbContextFactory] Configurando para PostgreSQL...");
                 optionsBuilder.UseNpgsql(connectionString,
