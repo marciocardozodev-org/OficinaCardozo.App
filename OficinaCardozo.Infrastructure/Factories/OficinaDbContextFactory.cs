@@ -14,13 +14,11 @@ namespace OficinaCardozo.Infrastructure.Factories
     public class OficinaDbContextFactory : IDesignTimeDbContextFactory<OficinaDbContext>
     {
         public OficinaDbContext CreateDbContext(string[] args)
-        {
+                {
             string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
             Console.WriteLine($"[OficinaDbContextFactory] ENV: {environment}");
-
             string apiProjectPath = Environment.GetEnvironmentVariable("API_PROJECT_PATH")
                 ?? Path.Combine(Directory.GetCurrentDirectory(), "..", "OficinaCardozo.API");
-
             IConfigurationRoot configuration = new ConfigurationBuilder()
                 .SetBasePath(apiProjectPath)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
@@ -28,9 +26,14 @@ namespace OficinaCardozo.Infrastructure.Factories
                 .AddUserSecrets<OficinaDbContextFactory>() 
                 .AddEnvironmentVariables()
                 .Build();
-
             var optionsBuilder = new DbContextOptionsBuilder<OficinaDbContext>();
             var connectionString = configuration.GetConnectionString("DefaultConnection");
+            Console.WriteLine($"[OficinaDbContextFactory] API_PROJECT_PATH: {apiProjectPath}");
+            Console.WriteLine($"[OficinaDbContextFactory] Arquivos de configuração lidos:");
+            Console.WriteLine($"  - appsettings.json: {System.IO.File.Exists(System.IO.Path.Combine(apiProjectPath, "appsettings.json"))}");
+            Console.WriteLine($"  - appsettings.{environment}.json: {System.IO.File.Exists(System.IO.Path.Combine(apiProjectPath, $"appsettings.{environment}.json"))}");
+            Console.WriteLine($"  - appsettings.Production.json: {System.IO.File.Exists(System.IO.Path.Combine(apiProjectPath, "appsettings.Production.json"))}");
+            Console.WriteLine($"  - appsettings.Development.json: {System.IO.File.Exists(System.IO.Path.Combine(apiProjectPath, "appsettings.Development.json"))}");
             Console.WriteLine($"[OficinaDbContextFactory] ConnectionString: {connectionString}");
 
             if (string.IsNullOrEmpty(connectionString))
