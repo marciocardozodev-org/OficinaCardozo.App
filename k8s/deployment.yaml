@@ -20,11 +20,13 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
-            envFrom:
+          envFrom:
             - configMapRef:
-              name: oficina-cardozo-config
+                name: oficina-cardozo-config
             - secretRef:
-              name: oficina-cardozo-db-secret
+                name: oficina-cardozo-db-secret
+            - secretRef:
+                name: oficina-cardozo-secrets
           resources:
             requests:
               cpu: "100m"
@@ -36,13 +38,13 @@ spec:
             httpGet:
               path: "/swagger/index.html"
               port: 8080
-            initialDelaySeconds: 20
+            initialDelaySeconds: 60
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: "/swagger/index.html"
               port: 8080
-            initialDelaySeconds: 40
+            initialDelaySeconds: 120
             periodSeconds: 20
 ---
 # Namespace é definido externamente pelo pipeline (K8S_NAMESPACE_*)

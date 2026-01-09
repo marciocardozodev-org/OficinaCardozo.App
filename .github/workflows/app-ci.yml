@@ -43,9 +43,17 @@ jobs:
 
     - name: Restore, Build & Test
       run: |
-        dotnet restore --verbosity minimal
-        dotnet build --no-restore --configuration Release --verbosity minimal
-        dotnet test --no-build --configuration Release --verbosity minimal --logger "console;verbosity=minimal"
+          dotnet restore OficinaCardozo.API/OficinaCardozo.API.csproj --verbosity minimal
+          dotnet restore OficinaCardozo.Infrastructure/OficinaCardozo.Infrastructure.csproj --verbosity minimal
+          dotnet restore OficinaCardozo.Application/OficinaCardozo.Application.csproj --verbosity minimal
+          dotnet restore OficinaCardozo.Domain/OficinaCardozo.Domain.csproj --verbosity minimal
+          dotnet restore OficinaCardozo.Tests/OficinaCardozo.Tests.csproj --verbosity minimal
+          dotnet build OficinaCardozo.API/OficinaCardozo.API.csproj --no-restore --configuration Release --verbosity minimal
+          dotnet build OficinaCardozo.Infrastructure/OficinaCardozo.Infrastructure.csproj --no-restore --configuration Release --verbosity minimal
+          dotnet build OficinaCardozo.Application/OficinaCardozo.Application.csproj --no-restore --configuration Release --verbosity minimal
+          dotnet build OficinaCardozo.Domain/OficinaCardozo.Domain.csproj --no-restore --configuration Release --verbosity minimal
+          dotnet build OficinaCardozo.Tests/OficinaCardozo.Tests.csproj --no-restore --configuration Release --verbosity minimal
+          dotnet test OficinaCardozo.Tests/OficinaCardozo.Tests.csproj --no-build --configuration Release --verbosity minimal --logger "console;verbosity=minimal"
 
     - name: Docker login
       if: env.DEPLOY_ENABLED == 'true'
@@ -83,7 +91,8 @@ jobs:
       env:
         KUBE_CONFIG: ${{ secrets.KUBE_CONFIG_HOMOLOG_PROD }}
 
-    - name: Deploy to Kubernetes
+
+    - name: Apply manifests to Kubernetes
       if: env.DEPLOY_ENABLED == 'true'
       run: |
         SHORT_SHA=${GITHUB_SHA::7}
@@ -94,6 +103,8 @@ jobs:
           NAMESPACE="${K8S_NAMESPACE_HOMOLOG}"
           TAG="homolog-${SHORT_SHA}"
         fi
+
+        kubectl -n "$NAMESPACE" apply -f k8s/
 
         kubectl -n "$NAMESPACE" set image deployment/oficina-cardozo-api \
           api=$DOCKER_IMAGE:$TAG
