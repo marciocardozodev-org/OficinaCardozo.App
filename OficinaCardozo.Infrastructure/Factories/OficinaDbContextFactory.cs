@@ -15,6 +15,7 @@ namespace OficinaCardozo.Infrastructure.Factories
     {
         public OficinaDbContext CreateDbContext(string[] args)
         {
+            //teste
             string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
             string apiProjectPath = Environment.GetEnvironmentVariable("API_PROJECT_PATH")
                 ?? Path.Combine(Directory.GetCurrentDirectory(), "..", "OficinaCardozo.API");
