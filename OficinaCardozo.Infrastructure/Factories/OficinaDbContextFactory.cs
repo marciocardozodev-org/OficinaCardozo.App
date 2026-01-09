@@ -9,7 +9,7 @@ using System.IO;
 namespace OficinaCardozo.Infrastructure.Factories
 {
     /// <summary>
-    /// Fábrica para criar instâncias de OficinaDbContext em tempo de design (ex: para criar migrações).
+    /// Fï¿½brica para criar instï¿½ncias de OficinaDbContext em tempo de design (ex: para criar migraï¿½ï¿½es).
     /// </summary>
     public class OficinaDbContextFactory : IDesignTimeDbContextFactory<OficinaDbContext>
     {
@@ -33,7 +33,7 @@ namespace OficinaCardozo.Infrastructure.Factories
 
             if (string.IsNullOrEmpty(connectionString))
             {
-                throw new InvalidOperationException("A string de conexão 'DefaultConnection' não foi encontrada.");
+                throw new InvalidOperationException("A string de conexï¿½o 'DefaultConnection' nï¿½o foi encontrada.");
             }
 
             if (environment == "Development")
@@ -52,6 +52,12 @@ namespace OficinaCardozo.Infrastructure.Factories
 
                 optionsBuilder.UseSqlServer(connectionString,
                     sqlOptions => sqlOptions.MigrationsAssembly(typeof(OficinaDbContext).Assembly.FullName));
+            }
+            else if (connectionString.Contains("Host=") || connectionString.Contains("host="))
+            {
+                Console.WriteLine("[OficinaDbContextFactory] Configurando para PostgreSQL...");
+                optionsBuilder.UseNpgsql(connectionString,
+                    npgsqlOptions => npgsqlOptions.MigrationsAssembly(typeof(OficinaDbContext).Assembly.FullName));
             }
             else
             {
