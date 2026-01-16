@@ -1,3 +1,13 @@
+    - name: Garantir que o namespace existe
+      if: env.DEPLOY_ENABLED == 'true'
+      run: |
+        SHORT_SHA=${GITHUB_SHA::7}
+        if [ "${GITHUB_REF}" = "refs/heads/master" ]; then
+          NAMESPACE="${K8S_NAMESPACE_PROD}"
+        else
+          NAMESPACE="${K8S_NAMESPACE_HOMOLOG}"
+        fi
+        kubectl get namespace "$NAMESPACE" || kubectl create namespace "$NAMESPACE"
 name: CI/CD - App Kubernetes
 
 on:
@@ -83,13 +93,18 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
-    - name: Configure kubectl
+
+
+    - name: Baixar tfstate do S3
+      if: env.DEPLOY_ENABLED == 'true'
+      run: aws s3 cp s3://oficina-cardozo-terraform-state/eks/prod/terraform.tfstate terraform.tfstate
+
+    - name: Gerar kubeconfig do EKS
       if: env.DEPLOY_ENABLED == 'true'
       run: |
-        mkdir -p $HOME/.kube
-        echo "${KUBE_CONFIG}" > $HOME/.kube/config
-      env:
-        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG_HOMOLOG_PROD }}
+        export CLUSTER_NAME="oficina-cardozo-eks"
+        export AWS_REGION="us-east-1"
+        aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME"
 
 
     - name: Apply manifests to Kubernetes
