@@ -43,9 +43,17 @@ jobs:
 
     - name: Restore, Build & Test
       run: |
-        dotnet restore --verbosity minimal
-        dotnet build --no-restore --configuration Release --verbosity minimal
-        dotnet test --no-build --configuration Release --verbosity minimal --logger "console;verbosity=minimal"
+          dotnet restore OficinaCardozo.API/OficinaCardozo.API.csproj --verbosity minimal
+          dotnet restore OficinaCardozo.Infrastructure/OficinaCardozo.Infrastructure.csproj --verbosity minimal
+          dotnet restore OficinaCardozo.Application/OficinaCardozo.Application.csproj --verbosity minimal
+          dotnet restore OficinaCardozo.Domain/OficinaCardozo.Domain.csproj --verbosity minimal
+          dotnet restore OficinaCardozo.Tests/OficinaCardozo.Tests.csproj --verbosity minimal
+          dotnet build OficinaCardozo.API/OficinaCardozo.API.csproj --no-restore --configuration Release --verbosity minimal
+          dotnet build OficinaCardozo.Infrastructure/OficinaCardozo.Infrastructure.csproj --no-restore --configuration Release --verbosity minimal
+          dotnet build OficinaCardozo.Application/OficinaCardozo.Application.csproj --no-restore --configuration Release --verbosity minimal
+          dotnet build OficinaCardozo.Domain/OficinaCardozo.Domain.csproj --no-restore --configuration Release --verbosity minimal
+          dotnet build OficinaCardozo.Tests/OficinaCardozo.Tests.csproj --no-restore --configuration Release --verbosity minimal
+          dotnet test OficinaCardozo.Tests/OficinaCardozo.Tests.csproj --no-build --configuration Release --verbosity minimal --logger "console;verbosity=minimal"
 
     - name: Docker login
       if: env.DEPLOY_ENABLED == 'true'
@@ -67,15 +75,29 @@ jobs:
         docker build -t $DOCKER_IMAGE:$TAG -f Dockerfile .
         docker push $DOCKER_IMAGE:$TAG
 
-    - name: Configure kubectl
+    - name: Configure AWS credentials for EKS
+      if: env.DEPLOY_ENABLED == 'true'
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+
+
+    - name: Baixar tfstate do S3
+      if: env.DEPLOY_ENABLED == 'true'
+      run: aws s3 cp s3://oficina-cardozo-terraform-state/eks/prod/terraform.tfstate terraform.tfstate
+
+    - name: Gerar kubeconfig do EKS
       if: env.DEPLOY_ENABLED == 'true'
       run: |
-        mkdir -p $HOME/.kube
-        echo "${KUBE_CONFIG}" > $HOME/.kube/config
-      env:
-        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG_HOMOLOG_PROD }}
+        export CLUSTER_NAME="oficina-cardozo-eks"
+        export AWS_REGION="us-east-1"
+        aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME"
 
-    - name: Deploy to Kubernetes
+
+    - name: Apply manifests to Kubernetes
       if: env.DEPLOY_ENABLED == 'true'
       run: |
         SHORT_SHA=${GITHUB_SHA::7}
@@ -87,10 +109,12 @@ jobs:
           TAG="homolog-${SHORT_SHA}"
         fi
 
+        kubectl -n "$NAMESPACE" apply -f k8s/
+
         kubectl -n "$NAMESPACE" set image deployment/oficina-cardozo-api \
           api=$DOCKER_IMAGE:$TAG
 
         kubectl -n "$NAMESPACE" rollout status deployment/oficina-cardozo-api
       env:
-        K8S_NAMESPACE_HOMOLOG: ${{ secrets.K8S_NAMESPACE_HOMOLOG }}
-        K8S_NAMESPACE_PROD: ${{ secrets.K8S_NAMESPACE_PROD }}
+        K8S_NAMESPACE_HOMOLOG: oficina-homolog
+        K8S_NAMESPACE_PROD: oficina-prod
