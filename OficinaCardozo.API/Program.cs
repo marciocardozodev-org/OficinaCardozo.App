@@ -12,45 +12,36 @@ using OficinaCardozo.Domain.Interfaces;
 using OficinaCardozo.Infrastructure.Data;
 using OficinaCardozo.Infrastructure.Repositories;
 using System.Text;
+using Serilog;
+using Serilog.Formatting.Json;
 
+// Configuração do Serilog para logs estruturados em JSON
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .WriteTo.Console(new JsonFormatter())
+    .CreateLogger();
 
-Console.WriteLine("Iniciando a configuração da API Oficina Cardozo...");
+Log.Information("Iniciando a configuração da API Oficina Cardozo...");
+
+var builder = WebApplication.CreateBuilder(args);
 
 try
 {
-    var builder = WebApplication.CreateBuilder(args);
-
+    // Substitui o logger padrão pelo Serilog
+    builder.Host.UseSerilog();
     // Detecta se está executando no AWS Lambda
     var isLambda = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME"));
-    
-    // NOTA: AddAWSLambdaHosting não é usado com APIGatewayHttpApiV2ProxyFunction
-    // Quando usamos LambdaEntryPoint com APIGatewayHttpApiV2ProxyFunction,
-    // o Lambda runtime gerencia automaticamente a integração
-    // if (isLambda)
-    // {
-    //     builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
-    // }
-
-    // Configura o provedor de variáveis de ambiente para ser case-insensitive,
-    // resolvendo a leitura de segredos no GitHub Codespaces.
-    builder.Configuration.AddEnvironmentVariables(prefix: null);
-
-    // Adiciona a configuração para ler segredos de arquivos (Docker Secrets),
-    // útil para ambientes de produção que usam essa abordagem.
-    if (builder.Environment.IsProduction())
-    {
-        builder.Configuration.AddKeyPerFile(directoryPath: "/run/secrets", optional: true);
-    }
 
     var connectionStringForLog = builder.Configuration.GetConnectionString("DefaultConnection");
     var jwtKeyForLog = builder.Configuration["ConfiguracoesJwt:ChaveSecreta"];
-    Console.WriteLine($"✅ ConnectionString 'DefaultConnection' carregada: {!string.IsNullOrEmpty(connectionStringForLog)}");
+
+    Log.Information($"✅ ConnectionString 'DefaultConnection' carregada: {!string.IsNullOrEmpty(connectionStringForLog)}");
     if (!string.IsNullOrEmpty(connectionStringForLog))
     {
         var preview = connectionStringForLog.Length > 60 ? connectionStringForLog.Substring(0, 60) + "..." : connectionStringForLog;
-        Console.WriteLine($"   Preview: {preview}");
+        Log.Information($"   Preview: {preview}");
     }
-    Console.WriteLine($"✅ Chave JWT 'ConfiguracoesJwt:ChaveSecreta' carregada: {!string.IsNullOrEmpty(jwtKeyForLog)}");
+    Log.Information($"✅ Chave JWT 'ConfiguracoesJwt:ChaveSecreta' carregada: {!string.IsNullOrEmpty(jwtKeyForLog)}");
 
 
     builder.Services.AddControllers();
@@ -96,9 +87,10 @@ try
     });
 
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    Console.WriteLine($"🔍 Connection String detectada: {(string.IsNullOrEmpty(connectionString) ? "NULL/VAZIA" : connectionString.Substring(0, Math.Min(50, connectionString.Length)))}...");
-    Console.WriteLine($"🌍 Ambiente: {builder.Environment.EnvironmentName}");
-    Console.WriteLine($"🚀 Lambda?: {Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME") ?? "NÃO"}");
+
+    Log.Information($"🔍 Connection String detectada: {(string.IsNullOrEmpty(connectionString) ? "NULL/VAZIA" : connectionString.Substring(0, Math.Min(50, connectionString.Length)))}...");
+    Log.Information($"🌍 Ambiente: {builder.Environment.EnvironmentName}");
+    Log.Information($"🚀 Lambda?: {Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME") ?? "NÃO"}");
 
     builder.Services.AddDbContext<OficinaDbContext>(options =>
     {
@@ -107,8 +99,8 @@ try
             // Detecta se é PostgreSQL pela connection string
             if (connectionString.Contains("Host=") || connectionString.Contains("host="))
             {
-                Console.WriteLine("✅ Configurando o provedor de banco de dados para PostgreSQL.");
-                Console.WriteLine($"📊 Connection String completa: {connectionString}");
+                Log.Information("✅ Configurando o provedor de banco de dados para PostgreSQL.");
+                Log.Information($"📊 Connection String completa: {connectionString}");
                 try
                 {
                     options.UseNpgsql(connectionString,
@@ -117,20 +109,20 @@ try
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"❌ ERRO ao configurar PostgreSQL: {ex.Message}");
-                    Console.WriteLine($"❌ StackTrace: {ex.StackTrace}");
+                    Log.Error($"❌ ERRO ao configurar PostgreSQL: {ex.Message}");
+                    Log.Error($"❌ StackTrace: {ex.StackTrace}");
                     throw;
                 }
             }
             else
             {
                 // Usa SQLite para ambientes locais
-                Console.WriteLine("✅ Configurando o provedor de banco de dados para SQLite.");
+                Log.Information("✅ Configurando o provedor de banco de dados para SQLite.");
                 var dbPath = connectionString.Contains("Data Source=") ? connectionString.Split('=')[1] : connectionString;
                 var dbFolder = Path.GetDirectoryName(dbPath);
                 if (!string.IsNullOrEmpty(dbFolder) && !Directory.Exists(dbFolder))
                 {
-                    Console.WriteLine($"📁 Criando diretório para o banco de dados SQLite em: {dbFolder}");
+                    Log.Information($"📁 Criando diretório para o banco de dados SQLite em: {dbFolder}");
                     Directory.CreateDirectory(dbFolder);
                 }
                 var sqliteConnectionString = connectionString.Contains("Data Source=") ? connectionString : $"Data Source={connectionString}";
@@ -140,7 +132,7 @@ try
         }
         else
         {
-            Console.WriteLine("❌ ERRO: Connection string não encontrada!");
+            Log.Error("❌ ERRO: Connection string não encontrada!");
             throw new InvalidOperationException("A string de conexão 'DefaultConnection' não foi encontrada.");
         }
 
@@ -225,7 +217,7 @@ try
 
     var app = builder.Build();
 
-    Console.WriteLine("📋 Configurando Swagger...");
+    Log.Information("📋 Configurando Swagger...");
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
@@ -252,28 +244,31 @@ try
         });
     }
 
-    Console.WriteLine("🔐 Configurando CORS, Authentication e Authorization...");
+    Log.Information("🔐 Configurando CORS, Authentication e Authorization...");
     app.UseCors("AllowAll");
     
-    // CRÍTICO: UseRouting deve vir antes de UseAuthentication/UseAuthorization
+
+    // Middleware de latência do Datadog (deve vir após UseRouting e antes dos controllers)
     app.UseRouting();
-    
+    app.UseMiddleware<OficinaCardozo.API.Middleware.DatadogLatencyMiddleware>();
+
     app.UseAuthentication();
     app.UseAuthorization();
-    
-    // MapControllers deve vir DEPOIS de UseRouting
+
     app.MapControllers();
 
-    Console.WriteLine("✅ Aplicação configurada e pronta para iniciar.");
+    Log.Information("✅ Aplicação configurada e pronta para iniciar.");
+
 
     app.Run();
+
+    Log.CloseAndFlush();
 
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"💥 ERRO FATAL: A aplicação falhou ao iniciar. {ex.Message}");
-    Console.WriteLine($"💥 Stack Trace completo:");
-    Console.WriteLine(ex.ToString());
+    Log.Fatal(ex, "💥 ERRO FATAL: A aplicação falhou ao iniciar.");
+    Log.CloseAndFlush();
     Environment.Exit(1);
 }
 
