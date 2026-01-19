@@ -16,6 +16,11 @@ spec:
     spec:
       containers:
         - name: api
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           image: marciocardozodev/oficinacardozo-api:latest
           imagePullPolicy: IfNotPresent
           ports:
@@ -27,6 +32,10 @@ spec:
                 name: oficina-cardozo-db-secret
             - secretRef:
                 name: oficina-cardozo-secrets
+            - configMapRef:
+                name: datadog-config
+            - secretRef:
+                name: datadog-secret
           resources:
             requests:
               cpu: "100m"
