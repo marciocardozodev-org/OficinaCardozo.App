@@ -66,12 +66,21 @@ public class OrdemServicoService : IOrdemServicoService
         _ordemServicoStatusRepository = ordemServicoStatusRepository;
         _orcamentoStatusRepository = orcamentoStatusRepository;
 
-        // Configura StatsdClient.Metrics apenas uma vez
+        // Configura StatsdClient.Metrics apenas uma vez, com suporte a STATSD_HOST
         if (!_metricsConfigured)
         {
+            // Prioriza STATSD_HOST, senão detecta ambiente
+            var statsdHost = Environment.GetEnvironmentVariable("STATSD_HOST");
+            if (string.IsNullOrEmpty(statsdHost))
+            {
+                var isKubernetes = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST"));
+                statsdHost = isKubernetes
+                    ? "datadog-agent.default.svc.cluster.local"
+                    : "127.0.0.1";
+            }
             StatsdClient.Metrics.Configure(new StatsdClient.MetricsConfig
             {
-                StatsdServerName = "datadog-agent.default.svc.cluster.local", // endereço correto do Agent no cluster
+                StatsdServerName = statsdHost,
                 StatsdServerPort = 8125
             });
             _metricsConfigured = true;
