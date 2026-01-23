@@ -47,6 +47,8 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.Configure<ConfiguracoesJwt>(builder.Configuration.GetSection("ConfiguracoesJwt"));
     // ...demais configurações de serviços...
+        // Registro do serviço de autenticação
+        builder.Services.AddScoped<IAutenticacaoService, AutenticacaoService>();
 
     // Swagger
     builder.Services.AddSwaggerGen(c =>
