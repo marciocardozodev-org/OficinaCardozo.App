@@ -11,6 +11,7 @@ using OficinaCardozo.Application.Settings;
 using OficinaCardozo.Domain.Interfaces;
 using OficinaCardozo.Infrastructure.Data;
 using OficinaCardozo.Infrastructure.Repositories;
+using OficinaCardozo.Infrastructure.Services;
 using System.Text;
 // Serilog removido para teste de isolamento
 // using Serilog.Enrichers; // ActivityEnricher não suportado em net8.0
@@ -82,6 +83,8 @@ try
             }
         });
     });
+
+    builder.Services.AddInfrastructureServices();
 
     // ...demais configurações de banco, JWT, DI, etc...
 
