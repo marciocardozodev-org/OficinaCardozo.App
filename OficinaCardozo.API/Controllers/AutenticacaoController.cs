@@ -23,24 +23,24 @@ public class AutenticacaoController : ControllerBase
     [HttpPost("login")]
     public async Task<ActionResult<TokenRespostaDto>> Login([FromBody] LoginDto loginDto)
     {
-        _logger.LogInformation("Login endpoint chamado para usuário {User}", loginDto?.Usuario);
+        _logger.LogInformation("Login endpoint chamado para usuário {User}", loginDto?.NomeUsuario);
         try
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             var resultado = await _autenticacaoService.FazerLoginAsync(loginDto);
-            _logger.LogInformation("Login realizado com sucesso para usuário {User}", loginDto?.Usuario);
+            _logger.LogInformation("Login realizado com sucesso para usuário {User}", loginDto?.NomeUsuario);
             return Ok(resultado);
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogWarning(ex, "Login não autorizado para usuário {User}", loginDto?.Usuario);
+            _logger.LogWarning(ex, "Login não autorizado para usuário {User}", loginDto?.NomeUsuario);
             return Unauthorized(new { message = ex.Message });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro interno no login para usuário {User}", loginDto?.Usuario);
+            _logger.LogError(ex, "Erro interno no login para usuário {User}", loginDto?.NomeUsuario);
             return StatusCode(500, new { message = "Erro interno do servidor", details = ex.Message });
         }
     }
