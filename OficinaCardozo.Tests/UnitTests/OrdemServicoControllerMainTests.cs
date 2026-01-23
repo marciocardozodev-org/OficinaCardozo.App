@@ -20,10 +20,12 @@ public class OrdemServicoControllerMainTests
         _controller = new OrdensServicoController(
             _mockOrdemServicoService.Object,
             Mock.Of<IServicoService>(),
-            Mock.Of<IPecaService>());
+            Mock.Of<IPecaService>(),
+            Mock.Of<Microsoft.Extensions.Logging.ILogger<OrdensServicoController>>()
+        );
     }
 
-    #region  Criaçío de Ordem
+    #region  Criaï¿½ï¿½o de Ordem
 
     [Fact]
     public async Task CreateOrdemServico_ComSucesso_DeveRetornarCreated()
@@ -52,7 +54,7 @@ public class OrdemServicoControllerMainTests
         var createDto = new CreateOrdemServicoDto();
         _mockOrdemServicoService
             .Setup(x => x.CreateOrdemServicoComOrcamentoAsync(createDto))
-            .ThrowsAsync(new KeyNotFoundException("Cliente não encontrado"));
+            .ThrowsAsync(new KeyNotFoundException("Cliente nï¿½o encontrado"));
 
         // Act
         var result = await _controller.CreateOrdemServicoComOrcamento(createDto);
@@ -95,7 +97,7 @@ public class OrdemServicoControllerMainTests
 
     #endregion
 
-    #region  Fluxo de Diagnóstico
+    #region  Fluxo de Diagnï¿½stico
 
     [Fact]
     public async Task IniciarDiagnostico_ComSucesso_DeveRetornarOk()
