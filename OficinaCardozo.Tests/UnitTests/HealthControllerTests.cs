@@ -1,9 +1,8 @@
 ﻿using OficinaCardozo.API.Controllers;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
-using OficinaCardozo.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 using Moq;
+using OficinaCardozo.Application.Interfaces;
 
 namespace OficinaCardozo.Tests.UnitTests
 {
@@ -13,9 +12,9 @@ namespace OficinaCardozo.Tests.UnitTests
         public void Live_ReturnsOk()
         {
             // Arrange
-            var options = new DbContextOptionsBuilder<OficinaDbContext>().Options;
-            var mockDbContext = new Mock<OficinaDbContext>(options);
-            var controller = new HealthController(mockDbContext.Object);
+            var mockHealthService = new Mock<IHealthService>();
+            mockHealthService.Setup(s => s.IsDatabaseHealthy()).Returns(true);
+            var controller = new HealthController(mockHealthService.Object);
 
             // Act
             var result = controller.Live();

@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using OficinaCardozo.Infrastructure.Data;
+using OficinaCardozo.Application.Interfaces;
 
 namespace OficinaCardozo.API.Controllers;
 
@@ -7,26 +7,19 @@ namespace OficinaCardozo.API.Controllers;
 [Route("[controller]")]
 public class HealthController : ControllerBase
 {
-    private readonly OficinaDbContext _context;
+    private readonly IHealthService _healthService;
 
-    public HealthController(OficinaDbContext context)
+    public HealthController(IHealthService healthService)
     {
-        try
-        {
-            _context = context;
-            Console.WriteLine($"[HealthController] Instanciado com DbContext em {DateTime.UtcNow:O}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[HealthController] ERRO ao instanciar: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}");
-            throw;
-        }
+        _healthService = healthService;
+        Console.WriteLine($"[HealthController] Instanciado com IHealthService em {DateTime.UtcNow:O}");
     }
 
     [HttpGet("live")]
     public IActionResult Live()
     {
         Console.WriteLine($"[HealthController] Live endpoint chamado em {DateTime.UtcNow:O}");
-        return Ok(new { status = "Live" });
+        var dbHealthy = _healthService.IsDatabaseHealthy();
+        return Ok(new { status = "Live", dbHealthy });
     }
 }
