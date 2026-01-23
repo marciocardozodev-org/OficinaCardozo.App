@@ -65,12 +65,22 @@ public class OrdemServicoService : IOrdemServicoService
         _orcamentoRepository = orcamentoRepository;
         _ordemServicoStatusRepository = ordemServicoStatusRepository;
         _orcamentoStatusRepository = orcamentoStatusRepository;
-        // Configura StatsdClient.Metrics apenas uma vez
+
+        // Configura StatsdClient.Metrics apenas uma vez, com suporte a STATSD_HOST
         if (!_metricsConfigured)
         {
+            // Prioriza STATSD_HOST, senão detecta ambiente
+            var statsdHost = Environment.GetEnvironmentVariable("STATSD_HOST");
+            if (string.IsNullOrEmpty(statsdHost))
+            {
+                var isKubernetes = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST"));
+                statsdHost = isKubernetes
+                    ? "datadog-agent.default.svc.cluster.local"
+                    : "127.0.0.1";
+            }
             StatsdClient.Metrics.Configure(new StatsdClient.MetricsConfig
             {
-                StatsdServerName = "localhost", // ajuste para o endereço do agente Datadog
+                StatsdServerName = statsdHost,
                 StatsdServerPort = 8125
             });
             _metricsConfigured = true;
@@ -189,6 +199,7 @@ public class OrdemServicoService : IOrdemServicoService
         catch (Exception)
         {
             StatsdClient.Metrics.Counter("ordem_servico.fail", 1);
+            StatsdClient.Metrics.Counter("echo_teste.metric", 1);
             throw;
         }
     }
@@ -269,6 +280,7 @@ public class OrdemServicoService : IOrdemServicoService
         catch (Exception)
         {
             StatsdClient.Metrics.Counter("ordem_servico.fail", 1);
+            StatsdClient.Metrics.Counter("echo_teste.metric", 1);
             throw;
         }
     }
@@ -330,6 +342,7 @@ public class OrdemServicoService : IOrdemServicoService
         catch (Exception)
         {
             StatsdClient.Metrics.Counter("ordem_servico.fail", 1);
+            StatsdClient.Metrics.Counter("echo_teste.metric", 1);
             throw;
         }
     }
