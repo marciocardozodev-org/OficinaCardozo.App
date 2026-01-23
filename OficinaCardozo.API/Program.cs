@@ -84,6 +84,9 @@ try
         });
     });
 
+    var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+    builder.Services.AddDbContext<OficinaDbContext>(options =>
+        options.UseNpgsql(connectionString));
     builder.Services.AddInfrastructureServices();
 
     // ...demais configurações de banco, JWT, DI, etc...
