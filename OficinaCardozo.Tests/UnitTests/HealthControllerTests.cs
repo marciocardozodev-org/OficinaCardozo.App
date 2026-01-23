@@ -14,7 +14,10 @@ namespace OficinaCardozo.Tests.UnitTests
             // Arrange
             var mockHealthService = new Mock<IHealthService>();
             mockHealthService.Setup(s => s.IsDatabaseHealthy()).Returns(true);
-            var controller = new HealthController(mockHealthService.Object);
+            var controller = new HealthController(
+                mockHealthService.Object,
+                Mock.Of<Microsoft.Extensions.Logging.ILogger<HealthController>>()
+            );
 
             // Act
             var result = controller.Live();
