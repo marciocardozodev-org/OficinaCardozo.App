@@ -8,20 +8,47 @@ if [ -z "$1" ]; then
 fi
 
 
-URL_BASE="$1"
 
-# Autenticação e obtenção do token
+ # Buscar veículos realmente vinculados ao cliente
+
+URL_BASE="$1"
+echo "URL_BASE: $URL_BASE"
+ echo "Buscando veículos do cliente $CPF_EXISTENTE..."
+ VEICULOS_JSON=$(curl -s -X GET "$URL_BASE/api/Veiculos?cpfCnpj=$CPF_EXISTENTE" -H "Content-Type: application/json" -H "$AUTH_HEADER")
+ PLACAS_EXISTENTES=($(echo "$VEICULOS_JSON" | grep -o '"placa":"[^"]*"' | cut -d':' -f2 | tr -d '"'))
+
+
+# Função para autenticar como admin
+autenticar_admin() {
+  AUTH_RESP=$(curl -s -X POST "$URL_BASE/api/Autenticacao/login" \
+    -H "Content-Type: application/json" \
+    -d '{"nomeUsuario":"admin","senha":"Password123!"}')
+  TOKEN=$(echo "$AUTH_RESP" | jq -r '.token')
+  if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+    echo "Erro ao autenticar como admin. Resposta: $AUTH_RESP"
+    exit 1
+  fi
+  AUTH_HEADER="Authorization: Bearer $TOKEN"
+  echo "Token admin obtido."
+}
+
+# Função para autenticar como cliente (CPF)
+autenticar_cpf() {
+  AUTH_RESP=$(curl -s -X POST "$URL_BASE/api/Autenticacao/login-cpf" \
+    -H "Content-Type: application/json" \
+    -d '{"cpfCnpj":"'$CPF_EXISTENTE'","senha":"Password123!"}')
+  TOKEN=$(echo "$AUTH_RESP" | jq -r '.token')
+  if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+    echo "Erro ao autenticar como cliente. Resposta: $AUTH_RESP"
+    exit 1
+  fi
+  AUTH_HEADER="Authorization: Bearer $TOKEN"
+  echo "Token cliente obtido."
+}
+
+# Autentica inicialmente como admin
 echo "Autenticando..."
-AUTH_RESP=$(curl -s -X POST "$URL_BASE/api/Autenticacao/login" \
-  -H "Content-Type: application/json" \
-  -d '{"nomeUsuario":"admin","senha":"Password123!"}')
-TOKEN=$(echo "$AUTH_RESP" | jq -r '.token')
-if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-  echo "Erro ao autenticar. Resposta: $AUTH_RESP"
-  exit 1
-fi
-AUTH_HEADER="Authorization: Bearer $TOKEN"
-echo "Token obtido."
+autenticar_admin
 
 
 
@@ -60,8 +87,8 @@ fi
 
 
 # Buscar todos os veículos do cliente existente
-VEICULOS_JSON=$(curl -s -X GET "$URL_BASE/api/Veiculos?cpfCnpj=$CPF_EXISTENTE" -H "Content-Type: application/json" -H "$AUTH_HEADER")
-PLACAS_EXISTENTES=($(echo "$VEICULOS_JSON" | grep -o '"placa":"[^\"]*"' | cut -d':' -f2 | tr -d '"'))
+for PLACA in "${PLACAS_EXISTENTES[@]}"; do
+for PLACA in "${PLACAS_VALIDAS[@]}"; do
 
 if [ ${#PLACAS_EXISTENTES[@]} -eq 0 ]; then
   echo "Não há veículos cadastrados para o cliente $CPF_EXISTENTE."
@@ -94,6 +121,13 @@ for PLACA in "${PLACAS_EXISTENTES[@]}"; do
   INICIAR_DIAG_RESP=$(curl -s -w "\n[HTTP_STATUS]%{http_code}" -X POST "$URL_BASE/api/OrdensServico/$ORDEM_ID/iniciar-diagnostico" -H "$AUTH_HEADER")
   echo "Resposta iniciar diagnóstico: $INICIAR_DIAG_RESP"
   INICIAR_DIAG_STATUS=$(echo "$INICIAR_DIAG_RESP" | grep '\[HTTP_STATUS\]' | sed 's/.*\[HTTP_STATUS\]\([0-9]*\)/\1/')
+  if [ "$INICIAR_DIAG_STATUS" = "403" ]; then
+    echo "403 ao iniciar diagnóstico. Tentando autenticar com CPF..."
+    autenticar_cpf
+    INICIAR_DIAG_RESP=$(curl -s -w "\n[HTTP_STATUS]%{http_code}" -X POST "$URL_BASE/api/OrdensServico/$ORDEM_ID/iniciar-diagnostico" -H "$AUTH_HEADER")
+    echo "Resposta iniciar diagnóstico (com CPF): $INICIAR_DIAG_RESP"
+    INICIAR_DIAG_STATUS=$(echo "$INICIAR_DIAG_RESP" | grep '\[HTTP_STATUS\]' | sed 's/.*\[HTTP_STATUS\]\([0-9]*\)/\1/')
+  fi
   if [ "$INICIAR_DIAG_STATUS" != "200" ] && [ "$INICIAR_DIAG_STATUS" != "201" ]; then
     echo "Erro ao iniciar diagnóstico da ordem $ORDEM_ID. Pulando para o próximo batch."
     continue
