@@ -205,12 +205,18 @@ public class AutenticacaoService : IAutenticacaoService
 
         var chave = Encoding.ASCII.GetBytes(_configuracoesJwt.ChaveSecreta);
 
+
         var claims = new List<Claim>
         {
             new("clienteId", cliente.Id.ToString()),
             new("cpfCnpj", cliente.CpfCnpj),
             new(ClaimTypes.Name, cliente.Nome)
         };
+        // Se o cpfCnpj for um CPF válido (11 dígitos), adiciona claim "cpf" para compatibilidade com policy
+        if (!string.IsNullOrEmpty(cliente.CpfCnpj) && cliente.CpfCnpj.Length == 11)
+        {
+            claims.Add(new Claim("cpf", cliente.CpfCnpj));
+        }
 
         var descritorToken = new SecurityTokenDescriptor
         {
