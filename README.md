@@ -20,5 +20,6 @@ Repositório principal da aplicação Oficina Cardozo. Responsável pela API, l�
 <!-- Insira aqui o diagrama da arquitetura deste repositório quando disponível -->
 
 ## Documentação da API
-- [Swagger](./OficinaCardozo.API/swagger)
+- [Swagger Homologação](http://a85fc4063a2e04d7588978c9cc1e0527-1865379925.us-east-1.elb.amazonaws.com/swagger)
+- [Swagger Produção](http://a33f79c8097bd4b22ace0ff7898e21e0-1554641145.us-east-1.elb.amazonaws.com/swagger)
 - [Coleção Postman](./docs/postman_collection.json)
