@@ -57,7 +57,11 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireCpf", policy =>
-        policy.RequireClaim("cpf"));
+        policy.RequireAssertion(context =>
+            context.User.HasClaim(c => c.Type == "cpf") ||
+            context.User.HasClaim(c => c.Type == "cpfCnpj")
+        )
+    );
 });
 
 // Diagnóstico: logar variáveis de ambiente do banco

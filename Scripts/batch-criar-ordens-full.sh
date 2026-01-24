@@ -61,14 +61,14 @@ fi
 
 # Buscar todos os veículos do cliente existente
 VEICULOS_JSON=$(curl -s -X GET "$URL_BASE/api/Veiculos?cpfCnpj=$CPF_EXISTENTE" -H "Content-Type: application/json" -H "$AUTH_HEADER")
-PLACAS_EXISTENTES=($(echo "$VEICULOS_JSON" | grep -o '"placa":"[^"]*"' | cut -d':' -f2 | tr -d '"'))
+PLACAS_EXISTENTES=($(echo "$VEICULOS_JSON" | grep -o '"placa":"[^\"]*"' | cut -d':' -f2 | tr -d '"'))
 
-for i in $(seq 0 4); do
-  PLACA="${PLACAS_EXISTENTES[$i]}"
-  if [ -z "$PLACA" ]; then
-    echo "Não há veículos suficientes cadastrados para o cliente."
-    break
-  fi
+if [ ${#PLACAS_EXISTENTES[@]} -eq 0 ]; then
+  echo "Não há veículos cadastrados para o cliente $CPF_EXISTENTE."
+  exit 1
+fi
+
+for PLACA in "${PLACAS_EXISTENTES[@]}"; do
   echo "\n--- Batch $i ---"
   echo "Usando cliente já existente: $CPF_EXISTENTE e veículo $PLACA"
   # Buscar ID do cliente pelo CPF
@@ -89,8 +89,15 @@ for i in $(seq 0 4); do
     echo "Erro ao criar ordem, pulando para o próximo batch."
     continue
   fi
+
   echo "Iniciando diagnóstico da ordem $ORDEM_ID..."
-  curl -s -X POST "$URL_BASE/api/OrdensServico/$ORDEM_ID/iniciar-diagnostico" -H "$AUTH_HEADER"
+  INICIAR_DIAG_RESP=$(curl -s -w "\n[HTTP_STATUS]%{http_code}" -X POST "$URL_BASE/api/OrdensServico/$ORDEM_ID/iniciar-diagnostico" -H "$AUTH_HEADER")
+  echo "Resposta iniciar diagnóstico: $INICIAR_DIAG_RESP"
+  INICIAR_DIAG_STATUS=$(echo "$INICIAR_DIAG_RESP" | grep '\[HTTP_STATUS\]' | sed 's/.*\[HTTP_STATUS\]\([0-9]*\)/\1/')
+  if [ "$INICIAR_DIAG_STATUS" != "200" ] && [ "$INICIAR_DIAG_STATUS" != "201" ]; then
+    echo "Erro ao iniciar diagnóstico da ordem $ORDEM_ID. Pulando para o próximo batch."
+    continue
+  fi
 
   echo "Finalizando diagnóstico da ordem $ORDEM_ID..."
   DIAG_RESP=$(curl -s -X POST "$URL_BASE/api/OrdensServico/$ORDEM_ID/finalizar-diagnostico" -H "$AUTH_HEADER")
