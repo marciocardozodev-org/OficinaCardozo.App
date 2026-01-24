@@ -1,47 +1,32 @@
-﻿using Xunit;
+﻿using OficinaCardozo.API.Controllers;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using FluentAssertions;
-using OficinaCardozo.API.Controllers;
-using OficinaCardozo.Infrastructure.Data;
-using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+using Moq;
+using OficinaCardozo.Application.Interfaces;
 
-namespace OficinaCardozo.Tests.UnitTests.Controllers;
-
-public class HealthControllerTests : IAsyncDisposable
+namespace OficinaCardozo.Tests.UnitTests
 {
-    private readonly OficinaDbContext _context;
-    private readonly HealthController _controller;
-
-    public HealthControllerTests()
+    public class HealthControllerTests
     {
-        var services = new ServiceCollection();
-        services.AddDbContext<OficinaDbContext>(options =>
-            options.UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}"));
+        [Fact]
+        public void Live_ReturnsOk()
+        {
+            // Arrange
+            var mockHealthService = new Mock<IHealthService>();
+            mockHealthService.Setup(s => s.IsDatabaseHealthy()).Returns(true);
+            var controller = new HealthController(
+                mockHealthService.Object,
+                Mock.Of<Microsoft.Extensions.Logging.ILogger<HealthController>>()
+            );
 
-        var serviceProvider = services.BuildServiceProvider();
-        _context = serviceProvider.GetRequiredService<OficinaDbContext>();
-        _controller = new HealthController(_context);
-    }
+            // Act
+            var result = controller.Live();
 
-    [Fact]
-    public async Task Get_ComBancoConectado_DeveRetornarHealthy()
-    {
-        // Act
-        var result = await _controller.Get();
-
-        // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var response = okResult.Value;
-
-        response.Should().NotBeNull();
-        response.GetType().GetProperty("status")?.GetValue(response).Should().Be("Healthy");
-        response.GetType().GetProperty("database")?.GetValue(response).Should().Be("Connected");
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await _context.DisposeAsync();
-        GC.SuppressFinalize(this);
+            // Assert
+            Assert.IsType<OkObjectResult>(result);
+            var okResult = result as OkObjectResult;
+            Assert.NotNull(okResult);
+            Assert.Equal(200, okResult.StatusCode ?? 200);
+        }
     }
 }

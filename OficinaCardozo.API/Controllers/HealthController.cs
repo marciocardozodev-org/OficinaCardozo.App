@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using OficinaCardozo.Infrastructure.Data;
+using Microsoft.Extensions.Logging;
+using OficinaCardozo.Application.Interfaces;
 
 namespace OficinaCardozo.API.Controllers;
 
@@ -8,65 +8,21 @@ namespace OficinaCardozo.API.Controllers;
 [Route("[controller]")]
 public class HealthController : ControllerBase
 {
-    private readonly OficinaDbContext _context;
+    private readonly ILogger<HealthController> _logger;
+    private readonly IHealthService _healthService;
 
-    public HealthController(OficinaDbContext context)
+    public HealthController(IHealthService healthService, ILogger<HealthController> logger)
     {
-        _context = context;
+        _healthService = healthService;
+        _logger = logger;
+        _logger.LogInformation("[HealthController] Instanciado com IHealthService em {Time}", DateTime.UtcNow);
     }
 
-    [HttpGet("ping")]
-    public IActionResult Ping()
+    [HttpGet("live")]
+    public IActionResult Live()
     {
-        // Rota simples que não depende de nada
-        return Ok(new
-        {
-            status = "Alive",
-            timestamp = DateTime.UtcNow,
-            version = "1.0.0",
-            environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
-            lambda = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME"))
-        });
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> Get()
-    {
-        try
-        {
-            // Timeout de 5 segundos para não travar
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            var canConnect = await _context.Database.CanConnectAsync(cts.Token);
-
-            return Ok(new
-            {
-                status = "Healthy",
-                timestamp = DateTime.UtcNow,
-                version = "1.0.0",
-                environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
-                database = canConnect ? "Connected" : "Disconnected"
-            });
-        }
-        catch (OperationCanceledException)
-        {
-            return StatusCode(503, new
-            {
-                status = "Unhealthy",
-                timestamp = DateTime.UtcNow,
-                error = "Database connection timeout (5s)",
-                database = "Timeout"
-            });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(503, new
-            {
-                status = "Unhealthy",
-                timestamp = DateTime.UtcNow,
-                error = ex.Message,
-                errorType = ex.GetType().Name,
-                database = "Disconnected"
-            });
-        }
+        _logger.LogInformation("[HealthController] Live endpoint chamado em {Time}", DateTime.UtcNow);
+        var dbHealthy = _healthService.IsDatabaseHealthy();
+        return Ok(new { status = "Live", dbHealthy });
     }
 }
