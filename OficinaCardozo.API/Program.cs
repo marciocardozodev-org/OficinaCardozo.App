@@ -90,6 +90,9 @@ try
         builder.Services.AddScoped<IPecaRepository, PecaRepository>();
         builder.Services.AddScoped<IVeiculoRepository, VeiculoRepository>();
         builder.Services.AddScoped<IOrdemServicoRepository, OrdemServicoRepository>();
+    builder.Services.AddScoped<IOrcamentoRepository, OrcamentoRepository>();
+    builder.Services.AddScoped<IOrdemServicoStatusRepository, OrdemServicoStatusRepository>();
+    builder.Services.AddScoped<IOrcamentoStatusRepository, OrcamentoStatusRepository>();
 
     // Swagger
     builder.Services.AddSwaggerGen(c =>
