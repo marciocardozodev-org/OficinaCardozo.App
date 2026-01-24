@@ -54,7 +54,11 @@ builder.Services.AddAuthentication(options =>
             ClockSkew = TimeSpan.Zero
         };
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireCpf", policy =>
+        policy.RequireClaim("cpf"));
+});
 
 // Diagnóstico: logar variáveis de ambiente do banco
 Console.WriteLine($"[DIAG] DB_CONNECTION: {Environment.GetEnvironmentVariable("DB_CONNECTION")}");
