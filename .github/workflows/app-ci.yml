@@ -87,38 +87,24 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
+        aws-region: sa-east-1
 
 
 
     - name: Baixar tfstate do S3
       if: env.DEPLOY_ENABLED == 'true'
-      run: aws s3 cp s3://oficina-cardozo-terraform-state/eks/prod/terraform.tfstate terraform.tfstate
+      run: aws s3 cp s3://oficina-cardozo-terraform-state-sp/eks/prod/terraform.tfstate terraform.tfstate
 
     - name: Gerar kubeconfig do EKS
       if: env.DEPLOY_ENABLED == 'true'
       run: |
         export CLUSTER_NAME="oficina-cardozo-eks"
-        export AWS_REGION="us-east-1"
+        export AWS_REGION="sa-east-1"
         aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME"
 
 
-    - name: Garantir Secret datadog-agent no namespace
-      if: env.DEPLOY_ENABLED == 'true'
-      run: |
-        if [ "${GITHUB_REF}" = "refs/heads/master" ]; then
-          NAMESPACE="${K8S_NAMESPACE_PROD}"
-        else
-          NAMESPACE="${K8S_NAMESPACE_HOMOLOG}"
-        fi
+    
 
-        kubectl create secret generic datadog-agent \
-          --from-literal=api-key="${{ secrets.DATADOG_API_KEY }}" \
-          --from-literal=DD_SITE="${{ secrets.DATADOG_SITE }}" \
-          --dry-run=client -o yaml | kubectl apply -n "$NAMESPACE" -f -
-      env:
-        K8S_NAMESPACE_HOMOLOG: oficina-homolog
-        K8S_NAMESPACE_PROD: oficina-prod
 
 
     - name: Apply manifests to Kubernetes
